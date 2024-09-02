@@ -72,7 +72,7 @@ pin-project-lite = "0.2.14"
 rcgen = { version = "0.13.1", default-features = false, features = ["aws_lc_rs", "pem", "x509-parser"], optional = true }
 regex = "1.10.4"
 rustls = { version = "0.23.5", optional = true }
-rustls-native-certs = "0.7.0"
+rustls-native-certs = "0.8.0"
 rustls-pemfile = { version = "2.1.2", optional = true }
 serde = { version = "1.0.202", features = ["derive"] }
 serde_yml = "0.0.11"
