@@ -6,7 +6,10 @@
 
 use std::{
     collections::HashMap,
-    fmt::Debug,
+    fmt::{
+        Debug,
+        Display,
+    },
     fs::File,
     io::BufReader,
     net::IpAddr,
@@ -80,6 +83,9 @@ pub enum Error {
 
     #[error("the target server didn't send a server certificate chain")]
     NoTargetCertificate,
+
+    #[error("error while loading native certificates")]
+    NativeCertsError(#[from] NativeCertsError),
 }
 
 /// A certificate authority
@@ -678,10 +684,44 @@ pub fn default_client_config() -> Result<Arc<ClientConfig>, Error> {
 pub fn native_certificates() -> Result<Arc<RootCertStore>, Error> {
     static CERTS: Lazy<RootCertStore> = Lazy::new();
     CERTS.get_or_try_init(|| {
-        let mut certs = RootCertStore::empty();
-        for cert in rustls_native_certs::load_native_certs()? {
-            certs.add(cert)?;
+        let result = rustls_native_certs::load_native_certs();
+        if !result.errors.is_empty() {
+            Err(NativeCertsError {
+                errors: result.errors,
+            }
+            .into())
         }
-        Ok(certs)
+        else {
+            let mut certs = RootCertStore::empty();
+            for cert in result.certs {
+                certs.add(cert)?;
+            }
+            Ok(certs)
+        }
     })
+}
+
+#[derive(Debug)]
+pub struct NativeCertsError {
+    errors: Vec<rustls_native_certs::Error>,
+}
+
+impl Display for NativeCertsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.errors.len() == 1 {
+            write!(f, "{}", self.errors[0])?;
+        }
+        else {
+            for (i, e) in self.errors.iter().enumerate() {
+                writeln!(f, "{i}. {e}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for NativeCertsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.errors[0])
+    }
 }
