@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - switch/dev
   pull_request:
     branches:
       - main
